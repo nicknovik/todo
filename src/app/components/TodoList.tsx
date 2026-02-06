@@ -93,7 +93,7 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
   if (view === "today") {
     // Only consider todos due today or without due date
     const dueToday = todos.filter(
-      (todo) => !todo.completed && todo.dueDate && isToday(todo.dueDate)
+      (todo) => !todo.completed && todo.dueDate && isToday(todo.dueDate) && !todo.deletedAt
     );
     // 1. Starred todo with due date = today (not completed)
     const starredWithDueToday = dueToday
@@ -121,7 +121,7 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
 
     // 3. Top 3 todo without due date, not completed
     const withoutDueDate = todos
-      .filter((todo) => !todo.completed && !todo.dueDate)
+      .filter((todo) => !todo.completed && !todo.dueDate && !todo.deletedAt)
       .sort((a, b) => {
         const priorityDiff = getPriorityValue(b.priority) - getPriorityValue(a.priority);
         if (priorityDiff !== 0) return priorityDiff;
@@ -134,7 +134,7 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
 
     // 4. Items completed today
     const completedToday = todos
-      .filter((todo) => todo.completed && isToday(todo.completedAt))
+      .filter((todo) => todo.completed && isToday(todo.completedAt) && !todo.deletedAt)
       .sort((a, b) => {
         const groupA = a.group || "Ungrouped";
         const groupB = b.group || "Ungrouped";
