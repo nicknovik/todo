@@ -19,6 +19,7 @@ export interface Todo {
   priority: "" | "!" | "!!" | "!!!";
   order: number;
   completedAt?: string;
+  deletedAt?: string | null;
 }
 
 interface TodoItemProps {
@@ -26,9 +27,10 @@ interface TodoItemProps {
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Todo>) => void;
+  showGroupInline?: boolean;
 }
 
-export function TodoItem({ todo, onToggle, onDelete, onUpdate }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }: TodoItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [editData, setEditData] = useState(todo);
 
@@ -71,6 +73,12 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate }: TodoItemProps) 
                 value={editData.summary}
                 onChange={(e) => setEditData({ ...editData, summary: e.target.value })}
                 className="mt-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    e.preventDefault();
+                    handleCollapse();
+                  }
+                }}
               />
             </div>
 
@@ -199,6 +207,11 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate }: TodoItemProps) 
         {todo.starred && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
         {todo.priority && <span className="text-red-500 text-sm font-bold">{todo.priority}</span>}
         {todo.repeatDays > 0 && <Repeat className="h-4 w-4 text-zinc-400" />}
+        {showGroupInline && todo.group && (
+          <span className="ml-2 text-xs font-medium text-blue-600 bg-blue-50 rounded px-2 py-0.5 whitespace-nowrap">
+            {todo.group}
+          </span>
+        )}
       </div>
       <Button
         variant="ghost"

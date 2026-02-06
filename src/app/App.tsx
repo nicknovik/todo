@@ -1,123 +1,83 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { AuthForm } from "./components/AuthForm";
+import { getCurrentUser, signOut } from "./auth";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Sidebar } from "./components/Sidebar";
 import { TodoList } from "./components/TodoList";
 import { Todo } from "./components/TodoItem";
+import { fetchTodos, addTodo, updateTodo, deleteTodo } from "./supabaseTodos";
+import { supabase } from "../supabaseClient";
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<"today" | "backlog">("today");
-  const [todos, setTodos] = useState<Todo[]>([
-    {
-      id: "1",
-      summary: "Review project proposal",
-      description: "",
-      completed: false,
-      category: "today",
-      dueDate: "2026-02-07",
-      starred: true,
-      repeatDays: 0,
-      group: "Work",
-      priority: "!!!",
-      order: 0,
-    },
-    {
-      id: "2",
-      summary: "Update documentation",
-      description: "",
-      completed: false,
-      category: "today",
-      dueDate: "2026-02-08",
-      starred: false,
-      repeatDays: 0,
-      group: "Work",
-      priority: "!",
-      order: 1,
-    },
-    {
-      id: "3",
-      summary: "Buy groceries",
-      description: "",
-      completed: false,
-      category: "today",
-      dueDate: "",
-      starred: false,
-      repeatDays: 0,
-      group: "Personal",
-      priority: "!!",
-      order: 0,
-    },
-    {
-      id: "4",
-      summary: "Research new features",
-      description: "",
-      completed: false,
-      category: "backlog",
-      dueDate: "",
-      starred: false,
-      repeatDays: 0,
-      group: "Work",
-      priority: "",
-      order: 0,
-    },
-    {
-      id: "5",
-      summary: "Call dentist",
-      description: "",
-      completed: false,
-      category: "today",
-      dueDate: "",
-      starred: false,
-      repeatDays: 0,
-      group: "Personal",
-      priority: "!",
-      order: 1,
-    },
-    {
-      id: "6",
-      summary: "Finish report",
-      description: "",
-      completed: true,
-      category: "today",
-      dueDate: "2026-02-06",
-      starred: false,
-      repeatDays: 0,
-      group: "Work",
-      priority: "!!",
-      order: 2,
-      completedAt: "2026-02-06",
-    },
-  ]);
+  const [currentView, setCurrentView] = useState<"today" | "backlog" | "recentlyDeleted">("today");
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [loadingTodos, setLoadingTodos] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-  const handleToggle = (id: string) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id
-          ? {
-              ...todo,
-              completed: !todo.completed,
-              completedAt: !todo.completed ? new Date().toISOString().split("T")[0] : undefined,
-            }
-          : todo
-      )
-    );
+  // Load todos from Supabase when user logs in
+  useEffect(() => {
+    async function cleanupAndFetch() {
+      if (user?.id) {
+        setLoadingTodos(true);
+        // Permanently remove deleted items older than 30 days
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        await supabase
+          .from("todos")
+          .delete()
+          .lt("deleted_at", thirtyDaysAgo)
+          .eq("user_id", user.id);
+        // Fetch todos
+        fetchTodos(user.id)
+          .then(setTodos)
+          .finally(() => setLoadingTodos(false));
+      } else {
+        setTodos([]);
+      }
+    }
+    cleanupAndFetch();
+  }, [user]);
+
+  useEffect(() => {
+    getCurrentUser().then(({ data }) => {
+      setUser(data?.user || null);
+      setLoadingUser(false);
+    });
+    // Listen for auth changes
+    const { data: listener } = (window as any).supabase?.auth.onAuthStateChange?.((event: string, session: any) => {
+      setUser(session?.user || null);
+    }) || { data: null };
+    return () => {
+      listener?.subscription?.unsubscribe?.();
+    };
+  }, []);
+
+  const handleToggle = async (id: string) => {
+    const todo = todos.find((t) => t.id === id);
+    if (!todo) return;
+    const updates = {
+      completed: !todo.completed,
+      completedAt: !todo.completed ? new Date().toISOString().split("T")[0] : undefined,
+    };
+    setTodos(todos.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    await updateTodo(id, updates);
   };
 
-  const handleDelete = (id: string) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
-  };
+  const handleDelete = async (id: string) => {
+    // Soft delete: set deletedAt
+    setTodos(todos.map((todo) => todo.id === id ? { ...todo, deletedAt: new Date().toISOString() } : todo));
+    await deleteTodo(id);
+  } 
 
-  const handleAdd = (text: string, category: "today" | "backlog") => {
-    // Find max order in the "Ungrouped" group for this category
+  const handleAdd = async (text: string, category: "today" | "backlog") => {
     const ungroupedTodos = todos.filter(
       (t) => t.category === category && (!t.group || t.group === "Ungrouped")
     );
     const maxOrder = ungroupedTodos.length > 0
       ? Math.max(...ungroupedTodos.map((t) => t.order))
       : -1;
-
-    const newTodo: Todo = {
-      id: Date.now().toString(),
+    const newTodo = {
       summary: text,
       description: "",
       completed: false,
@@ -126,21 +86,25 @@ export default function App() {
       starred: false,
       repeatDays: 0,
       group: "",
-      priority: "",
+      priority: "" as "" | "!" | "!!" | "!!!",
       order: maxOrder + 1,
     };
-    setTodos([...todos, newTodo]);
+    await addTodo(user.id, newTodo);
+    // Refetch todos from backend to ensure state is correct
+    const updatedTodos = await fetchTodos(user.id);
+    setTodos(updatedTodos);
   };
 
-  const handleUpdate = (id: string, updates: Partial<Todo>) => {
+  const handleUpdate = async (id: string, updates: Partial<Todo>) => {
     setTodos(
       todos.map((todo) =>
         todo.id === id ? { ...todo, ...updates } : todo
       )
     );
+    await updateTodo(id, updates);
   };
 
-  const handleMove = (dragId: string, hoverId: string, dragGroup: string, hoverGroup: string) => {
+  const handleMove = async (dragId: string, hoverId: string, dragGroup: string, hoverGroup: string) => {
     const dragTodo = todos.find((t) => t.id === dragId);
     const hoverTodo = todos.find((t) => t.id === hoverId);
 
@@ -172,6 +136,10 @@ export default function App() {
       });
 
       setTodos(updatedTodos);
+      // Persist order changes
+      for (const t of newGroupTodos) {
+        await updateTodo(t.id, { order: newGroupTodos.findIndex((x) => x.id === t.id) });
+      }
     } else {
       // Moving to a different group
       const newGroup = hoverGroup === "Ungrouped" ? "" : hoverGroup;
@@ -218,23 +186,36 @@ export default function App() {
       });
 
       setTodos(finalTodos);
+      // Persist order changes
+      for (const t of finalTodos) {
+        await updateTodo(t.id, { order: finalTodos.findIndex((x) => x.id === t.id) });
+      }
     }
   };
 
+  if (loadingUser || loadingTodos) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+  if (!user) {
+    return <AuthForm onAuth={() => getCurrentUser().then(({ data }) => setUser(data?.user || null))} />;
+  }
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="size-full flex bg-zinc-50">
-        <Sidebar currentView={currentView} onViewChange={setCurrentView} />
-        <TodoList
-          todos={todos}
-          view={currentView}
-          onToggle={handleToggle}
-          onDelete={handleDelete}
-          onAdd={handleAdd}
-          onUpdate={handleUpdate}
-          onMove={handleMove}
-        />
-      </div>
-    </DndProvider>
+    <>
+      <button onClick={() => { signOut(); setUser(null); }} className="absolute top-4 right-4 bg-zinc-200 px-4 py-2 rounded">Sign Out</button>
+      <DndProvider backend={HTML5Backend}>
+        <div className="size-full flex bg-zinc-50">
+          <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+          <TodoList
+            todos={todos}
+            view={currentView}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+            onAdd={handleAdd}
+            onUpdate={handleUpdate}
+            onMove={handleMove}
+          />
+        </div>
+      </DndProvider>
+    </>
   );
 }
