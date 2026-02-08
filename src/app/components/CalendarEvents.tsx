@@ -59,7 +59,7 @@ export function CalendarEvents({ events, onAddCalendarAccess }: CalendarEventsPr
             key={event.id}
             className="border border-blue-200 rounded-lg px-1 pt-0 pb-1 bg-blue-50 flex flex-col gap-0.5"
           >
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center justify-between gap-2">
               <h4 className="font-medium text-sm text-blue-900 flex-1">
                 {event.summary}
               </h4>
