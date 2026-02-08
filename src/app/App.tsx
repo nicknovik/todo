@@ -22,8 +22,8 @@ export default function App() {
     async function cleanupAndFetch() {
       if (user?.id) {
         setLoadingTodos(true);
-        // Permanently remove deleted items older than 30 days
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        // Permanently remove deleted items older than 365 days
+        const thirtyDaysAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
         await supabase
           .from("todos")
           .delete()
