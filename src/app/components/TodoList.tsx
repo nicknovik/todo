@@ -93,10 +93,10 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
           <h2 className="text-3xl font-semibold text-zinc-900 mb-4 capitalize">
             Recently deleted
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-0">
             {filteredTodos.length > 0 ? (
               filteredTodos.map((todo) => (
-                <div key={todo.id} className="border border-zinc-200 rounded-lg p-2 bg-zinc-50 flex flex-col gap-1 opacity-60">
+                <div key={todo.id} className="border border-zinc-200 rounded-lg p-0.5 bg-zinc-50 flex flex-col gap-0.5 opacity-60">
                   <div className="flex items-center gap-1">
                     <span className="font-semibold text-zinc-700 line-through text-sm">{todo.summary}</span>
                     <span className="text-sm text-zinc-400 ml-1">Deleted: {todo.deletedAt?.slice(0, 10)}</span>
@@ -205,13 +205,13 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
             </div>
           </form>
 
-          <div className="space-y-4">
+          <div className="space-y-1">
               {starredWithDueToday.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-0">
                 <h3 className="text-xs font-semibold text-yellow-600 px-2 py-1 bg-yellow-50 rounded-md flex items-center gap-1.5">
                   ⭐ Starred & Due
                 </h3>
-                <div className="space-y-1.5">
+                <div className="space-y-0">
                     {starredWithDueToday.map((todo) => (
                     <TodoItem
                       key={todo.id}
@@ -227,11 +227,11 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
             )}
 
               {otherWithDueToday.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-0">
                 <h3 className="text-xs font-semibold text-zinc-700 px-2 py-1 bg-zinc-100 rounded-md">
                   📅 Scheduled
                 </h3>
-                <div className="space-y-1.5">
+                <div className="space-y-0">
                     {otherWithDueToday.map((todo) => (
                     <TodoItem
                       key={todo.id}
@@ -247,11 +247,11 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
             )}
 
             {withoutDueDate.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-0">
                 <h3 className="text-xs font-semibold text-zinc-700 px-2 py-1 bg-zinc-100 rounded-md">
                   📋 Next Up (Top 3)
                 </h3>
-                <div className="space-y-1.5">
+                <div className="space-y-0">
                   {withoutDueDate.map((todo) => (
                     <TodoItem
                       key={todo.id}
@@ -267,11 +267,11 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
             )}
 
             {completedToday.length > 0 && (
-              <div className="space-y-1.5">
+              <div className="space-y-0">
                 <h3 className="text-xs font-semibold text-green-700 px-2 py-1 bg-green-50 rounded-md">
                   ✓ Completed Today
                 </h3>
-                <div className="space-y-1.5">
+                <div className="space-y-0">
                   {completedToday.map((todo) => (
                     <TodoItem
                       key={todo.id}
@@ -371,11 +371,11 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
           </div>
         </form>
 
-        <div className="space-y-4">
+        <div className="space-y-0">
           {sortedActiveGroupNames.length > 0 && (
-            <div className="space-y-3.5">
+            <div className="space-y-0">
               {sortedActiveGroupNames.map((groupName, groupIndex) => (
-                <div key={groupName} className="space-y-1.5">
+                <div key={groupName} className="space-y-0">
                   {onMoveGroup && (
                     <DraggableGroupHeader
                       groupName={groupName}
@@ -389,7 +389,7 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
                       {groupName}
                     </h3>
                   )}
-                  <div className="space-y-1.5">
+                  <div className="space-y-0">
                     {groupedActiveTodos[groupName].map((todo, index) => (
                       <DraggableTodoItem
                         key={todo.id}
@@ -416,12 +416,12 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
           )}
 
           {sortedCompletedGroupNames.length > 0 && (
-            <div className="space-y-3.5">
+            <div className="space-y-0">
               <h3 className="text-xs font-medium text-zinc-500 mb-1 px-2">
                 Completed
               </h3>
               {sortedCompletedGroupNames.map((groupName, groupIndex) => (
-                <div key={`completed-${groupName}`} className="space-y-1.5">
+                <div key={`completed-${groupName}`} className="space-y-0">
                   {onMoveGroup && (
                     <DraggableGroupHeader
                       groupName={groupName}
@@ -435,7 +435,7 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
                       {groupName}
                     </h4>
                   )}
-                  <div className="space-y-1.5">
+                  <div className="space-y-0">
                     {groupedCompletedTodos[groupName].map((todo, index) => (
                       <DraggableTodoItem
                         key={todo.id}

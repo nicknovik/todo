@@ -58,22 +58,22 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
 
   if (isExpanded) {
     return (
-      <div className="border border-zinc-200 rounded-lg p-4 bg-white space-y-4">
-        <div className="flex items-start gap-3">
+      <div className="border border-zinc-200 rounded-lg p-2 bg-white space-y-2">
+        <div className="flex items-start gap-2">
           <Checkbox
             checked={editData.completed}
             onCheckedChange={() => setEditData({ ...editData, completed: !editData.completed })}
             id={`todo-expanded-${todo.id}`}
-            className="mt-1"
+            className="mt-0.5"
           />
-          <div className="flex-1 space-y-4">
+          <div className="flex-1 space-y-2">
             <div>
               <Label htmlFor={`summary-${todo.id}`}>Summary</Label>
               <Input
                 id={`summary-${todo.id}`}
                 value={editData.summary}
                 onChange={(e) => setEditData({ ...editData, summary: e.target.value })}
-                className="mt-1"
+                className="mt-0.5"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
                     e.preventDefault();
@@ -89,12 +89,12 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 id={`description-${todo.id}`}
                 value={editData.description}
                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                className="mt-1 min-h-24"
+                className="mt-0.5 min-h-20"
                 placeholder="Add details..."
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label htmlFor={`duedate-${todo.id}`}>Due date</Label>
                 <Input
@@ -102,7 +102,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                   type="date"
                   value={editData.dueDate}
                   onChange={(e) => setEditData({ ...editData, dueDate: e.target.value })}
-                  className="mt-1"
+                  className="mt-0.5"
                 />
               </div>
 
@@ -125,7 +125,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 id={`group-${todo.id}`}
                 value={editData.group}
                 onChange={(e) => setEditData({ ...editData, group: e.target.value })}
-                className="mt-1"
+                className="mt-0.5"
                 placeholder="e.g., Work, Personal..."
               />
             </div>
@@ -183,7 +183,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
 
   return (
     <div 
-      className="flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-50 group transition-colors cursor-pointer"
+      className="flex items-center gap-1 p-1 rounded-lg hover:bg-zinc-50 group transition-colors cursor-pointer"
       onClick={handleExpand}
     >
       <Checkbox
@@ -194,7 +194,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
         onClick={(e) => e.stopPropagation()}
         id={`todo-${todo.id}`}
       />
-      <div className="flex-1 flex items-center gap-2">
+      <div className="flex-1 flex items-center gap-1">
         <label
           htmlFor={`todo-${todo.id}`}
           className={`flex-1 cursor-pointer select-none ${
@@ -208,7 +208,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
         {todo.priority && <span className="text-red-500 text-sm font-bold">{todo.priority}</span>}
         {todo.repeatDays > 0 && <Repeat className="h-4 w-4 text-zinc-400" />}
         {showGroupInline && todo.group && (
-          <span className="ml-2 text-xs font-medium text-blue-600 bg-blue-50 rounded px-2 py-0.5 whitespace-nowrap">
+          <span className="ml-1 text-[10px] font-medium text-blue-600 bg-blue-50 rounded px-1 py-0 whitespace-nowrap">
             {todo.group}
           </span>
         )}
@@ -216,13 +216,13 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
       <Button
         variant="ghost"
         size="sm"
-        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0"
+        className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
         onClick={(e) => {
           e.stopPropagation();
           onDelete(todo.id);
         }}
       >
-        <Trash2 className="h-4 w-4 text-zinc-400 hover:text-red-500" />
+        <Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-500" />
         <span className="sr-only">Delete</span>
       </Button>
     </div>

@@ -19,12 +19,12 @@ export function CalendarEvents({ events, onAddCalendarAccess }: CalendarEventsPr
   // No calendar access yet - show dummy view with request button
   if (events === null) {
     return (
-      <div className="mb-4 border border-zinc-300 rounded-lg p-4 bg-zinc-100 opacity-60">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="mb-2 border border-zinc-300 rounded-lg p-2 bg-zinc-100 opacity-60">
+        <div className="flex items-center gap-1 mb-1">
           <Calendar className="h-4 w-4 text-zinc-400" />
           <h3 className="text-xs font-semibold text-zinc-500">Google Calendar</h3>
         </div>
-        <p className="text-xs text-zinc-500 mb-3">
+        <p className="text-xs text-zinc-500 mb-1">
           Connect your Google Calendar to see your events here.
         </p>
         <button
@@ -32,7 +32,7 @@ export function CalendarEvents({ events, onAddCalendarAccess }: CalendarEventsPr
             await signInWithGoogle();
             onAddCalendarAccess?.();
           }}
-          className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 text-xs font-medium"
+          className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 text-xs font-medium"
         >
           <Lock className="h-3 w-3" />
           Connect Google Calendar
@@ -48,16 +48,16 @@ export function CalendarEvents({ events, onAddCalendarAccess }: CalendarEventsPr
 
   // Have events - display them
   return (
-    <div className="mb-4 space-y-2">
-      <div className="flex items-center gap-2 px-2">
+    <div className="mb-2 space-y-1">
+      <div className="flex items-center gap-1 px-1">
         <Calendar className="h-4 w-4 text-blue-600" />
         <h3 className="text-xs font-semibold text-blue-700">📅 Today's Events</h3>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1">
         {events.map((event) => (
           <div
             key={event.id}
-            className="border border-blue-200 rounded-lg p-3 bg-blue-50 flex flex-col gap-1"
+            className="border border-blue-200 rounded-lg p-1 bg-blue-50 flex flex-col gap-0.5"
           >
             <div className="flex items-start justify-between gap-2">
               <h4 className="font-medium text-sm text-blue-900 flex-1">

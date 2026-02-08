@@ -81,12 +81,12 @@ export function DraggableTodoItem({
       className="relative"
     >
       <div ref={dropRef}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <div
             ref={dragRef}
             className="cursor-move text-zinc-400 hover:text-zinc-600"
           >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical className="h-3 w-3" />
         </div>
         <div className="flex-1">
           <TodoItem
