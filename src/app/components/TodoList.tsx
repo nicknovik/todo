@@ -8,6 +8,8 @@ import { GroupDropZone } from "./GroupDropZone";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { TodoItem } from "./TodoItem";
+import { CalendarEvents } from "./CalendarEvents";
+import { CalendarEvent } from "../googleCalendarService";
 
 interface TodoListProps {
   todos: Todo[];
@@ -19,9 +21,11 @@ interface TodoListProps {
   onMove: (dragId: string, hoverId: string, dragGroup: string, hoverGroup: string) => void;
   onMoveGroup?: (dragGroup: string, hoverGroup: string, insertAfter?: boolean) => void;
   groupOrder?: string[];
+  calendarEvents?: CalendarEvent[] | null;
+  onRefreshCalendar?: () => void;
 }
 
-export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onMove, onMoveGroup, groupOrder }: TodoListProps) {
+export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onMove, onMoveGroup, groupOrder, calendarEvents, onRefreshCalendar }: TodoListProps) {
   const [newTodo, setNewTodo] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -179,6 +183,11 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
           <h2 className="text-2xl font-semibold text-zinc-900 mb-4 capitalize">
             {view}
           </h2>
+
+          <CalendarEvents
+            events={calendarEvents ?? null}
+            onAddCalendarAccess={onRefreshCalendar}
+          />
 
           <form onSubmit={handleSubmit} className="mb-4">
             <div className="flex gap-1">

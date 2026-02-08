@@ -7,6 +7,8 @@ import { Sidebar } from "./components/Sidebar";
 import { TodoList } from "./components/TodoList";
 import { Todo } from "./components/TodoItem";
 import { fetchTodos, addTodo, updateTodo, deleteTodo, fetchGroupOrder, updateGroupOrder } from "./supabaseTodos";
+import { fetchTodayCalendarEvents, hasCalendarAccess } from "./googleCalendarService";
+import { CalendarEvent } from "./googleCalendarService";
 import { supabase } from "../supabaseClient";
 
 export default function App() {
@@ -16,53 +18,94 @@ export default function App() {
   const [loadingTodos, setLoadingTodos] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[] | null>(null);
+  const [loadingCalendar, setLoadingCalendar] = useState(false);
 
   // Load todos from Supabase when user logs in
   useEffect(() => {
     async function cleanupAndFetch() {
       if (user?.id) {
         setLoadingTodos(true);
-        // Permanently remove deleted items older than 365 days
-        const thirtyDaysAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
-        await supabase
-          .from("todos")
-          .delete()
-          .lt("deleted_at", thirtyDaysAgo)
-          .eq("user_id", user.id);
-        // Fetch todos
-        const todos = await fetchTodos(user.id);
-        setTodos(todos);
-        // Fetch group order
         try {
-          const orders = await fetchGroupOrder(user.id);
-          const backlogOrder = orders.backlog || [];
-          setGroupOrder(backlogOrder);
-        } catch (err) {
-          // Table may not exist yet, that's ok
-          setGroupOrder([]);
+          // Permanently remove deleted items older than 365 days
+          const thirtyDaysAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+          await supabase
+            .from("todos")
+            .delete()
+            .lt("deleted_at", thirtyDaysAgo)
+            .eq("user_id", user.id);
+          // Fetch todos
+          const todos = await fetchTodos(user.id);
+          setTodos(todos);
+          // Fetch group order
+          try {
+            const orders = await fetchGroupOrder(user.id);
+            const backlogOrder = orders.backlog || [];
+            setGroupOrder(backlogOrder);
+          } catch (err) {
+            // Table may not exist yet, that's ok
+            setGroupOrder([]);
+          }
+        } catch (error) {
+          console.error("Failed to load todos:", error);
+        } finally {
+          setLoadingTodos(false);
         }
-        setLoadingTodos(false);
       } else {
         setTodos([]);
         setGroupOrder([]);
+        setLoadingTodos(false);
       }
     }
     cleanupAndFetch();
   }, [user]);
 
   useEffect(() => {
-    getCurrentUser().then(({ data }) => {
-      setUser(data?.user || null);
+    // Get initial session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      setLoadingUser(false);
+    }).catch(() => {
+      setUser(null);
       setLoadingUser(false);
     });
-    // Listen for auth changes
-    const { data: listener } = (window as any).supabase?.auth.onAuthStateChange?.((event: string, session: any) => {
+    
+    // Listen for auth changes (also sets loadingUser as safety net)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
-    }) || { data: null };
+      setLoadingUser(false);
+    });
+    
     return () => {
-      listener?.subscription?.unsubscribe?.();
+      subscription.unsubscribe();
     };
   }, []);
+
+  // Fetch calendar events when user logs in or view changes to "today"
+  useEffect(() => {
+    async function loadCalendarEvents() {
+      if (user?.id && currentView === "today") {
+        setLoadingCalendar(true);
+        try {
+          const events = await fetchTodayCalendarEvents();
+          setCalendarEvents(events);
+        } catch (error) {
+          console.error("Failed to load calendar events:", error);
+          setCalendarEvents(null);
+        } finally {
+          setLoadingCalendar(false);
+        }
+      }
+    }
+    loadCalendarEvents();
+  }, [user?.id, currentView]);
+
+  // Note: We intentionally do NOT call getSession() (directly or via
+  // fetchTodayCalendarEvents) inside an onAuthStateChange callback.
+  // Supabase v2 awaits all subscriber callbacks during initialization,
+  // and getSession() awaits initializePromise — causing a deadlock on
+  // page refresh.  Calendar events are already loaded by the effect
+  // above when user?.id or currentView changes.
 
   const handleToggle = async (id: string) => {
     const todo = todos.find((t) => t.id === id);
@@ -321,6 +364,11 @@ export default function App() {
             onMove={handleMove}
             onMoveGroup={handleMoveGroup}
             groupOrder={groupOrder}
+            calendarEvents={calendarEvents === undefined ? null : calendarEvents}
+            onRefreshCalendar={async () => {
+              const events = await fetchTodayCalendarEvents();
+              setCalendarEvents(events);
+            }}
           />
         </div>
       </DndProvider>

@@ -1,13 +1,13 @@
 import { supabase } from "../supabaseClient";
 
 export async function signUpWithEmail(email: string, password: string) {
-  const { user, error } = await supabase.auth.signUp({ email, password });
-  return { user, error };
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  return { user: data?.user, error };
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  const { user, error } = await supabase.auth.signInWithPassword({ email, password });
-  return { user, error };
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  return { user: data?.user, error };
 }
 
 export async function signInWithGoogle() {
@@ -15,6 +15,7 @@ export async function signInWithGoogle() {
     provider: 'google',
     options: {
       redirectTo: window.location.origin,
+      scopes: 'openid profile email https://www.googleapis.com/auth/calendar.readonly',
     },
   });
   return { error };
