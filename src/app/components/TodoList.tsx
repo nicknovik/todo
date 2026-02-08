@@ -20,12 +20,13 @@ interface TodoListProps {
   onUpdate: (id: string, updates: Partial<Todo>) => void;
   onMove: (dragId: string, hoverId: string, dragGroup: string, hoverGroup: string) => void;
   onMoveGroup?: (dragGroup: string, hoverGroup: string, insertAfter?: boolean) => void;
+  onRenameGroup?: (oldName: string, newName: string) => void;
   groupOrder?: string[];
   calendarEvents?: CalendarEvent[] | null;
   onRefreshCalendar?: () => void;
 }
 
-export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onMove, onMoveGroup, groupOrder, calendarEvents, onRefreshCalendar }: TodoListProps) {
+export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onMove, onMoveGroup, onRenameGroup, groupOrder, calendarEvents, onRefreshCalendar }: TodoListProps) {
   const [newTodo, setNewTodo] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -381,6 +382,7 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
                       groupName={groupName}
                       groupIndex={groupIndex}
                       onMoveGroup={onMoveGroup}
+                      onRenameGroup={onRenameGroup}
                       color="bg-zinc-100"
                     />
                   )}
@@ -426,6 +428,7 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
                     <DraggableGroupHeader
                       groupName={groupName}
                       groupIndex={groupIndex}
+                      onRenameGroup={onRenameGroup}
                       onMoveGroup={onMoveGroup}
                       color="bg-zinc-50"
                     />

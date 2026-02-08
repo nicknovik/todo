@@ -355,6 +355,43 @@ export default function App() {
     }
   };
 
+  const handleRenameGroup = async (oldName: string, newName: string) => {
+    if (oldName === newName || !newName.trim()) return;
+
+    // Update all todos with the old group name to have the new group name
+    const updatedTodos = todos.map((todo) => {
+      if ((todo.group || "Ungrouped") === oldName) {
+        return { ...todo, group: newName === "Ungrouped" ? "" : newName };
+      }
+      return todo;
+    });
+
+    setTodos(updatedTodos);
+
+    // Update group order to reflect the new name
+    const newGroupOrder = groupOrder.map((g) => (g === oldName ? newName : g));
+    setGroupOrder(newGroupOrder);
+
+    // Persist changes to database
+    try {
+      // Update all todos with the old group name
+      const todosToUpdate = todos.filter((t) => (t.group || "Ungrouped") === oldName);
+      await Promise.all(
+        todosToUpdate.map((todo) =>
+          updateTodo(todo.id, { group: newName === "Ungrouped" ? "" : newName })
+        )
+      );
+
+      // Update group order
+      await updateGroupOrder(user.id, { backlog: newGroupOrder });
+    } catch (err) {
+      console.error("Failed to rename group:", err);
+      // Revert on error
+      setTodos(todos);
+      setGroupOrder(groupOrder);
+    }
+  };
+
   if (loadingUser || loadingTodos) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
@@ -376,6 +413,7 @@ export default function App() {
             onUpdate={handleUpdate}
             onMove={handleMove}
             onMoveGroup={handleMoveGroup}
+            onRenameGroup={handleRenameGroup}
             groupOrder={groupOrder}
             calendarEvents={calendarEvents === undefined ? null : calendarEvents}
             onRefreshCalendar={async () => {
