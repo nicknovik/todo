@@ -50,7 +50,12 @@ export function CalendarEvents({ events, onAddCalendarAccess }: CalendarEventsPr
   return (
     <div className="mb-2 space-y-1">
       <div className="flex items-center gap-1 px-1">
-        <Calendar className="h-4 w-4 text-blue-600" />
+        <img
+          src="/calendar_8_2x.png"
+          alt="Calendar"
+          className="h-4 w-4"
+          style={{ objectFit: "contain" }}
+        />
         <h3 className="text-xs font-semibold text-blue-700">Today's Events</h3>
       </div>
       <div className="space-y-1">
