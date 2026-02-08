@@ -73,6 +73,13 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
     return dateString === today;
   };
 
+  // Helper to check if a date is today or before today (overdue)
+  const isTodayOrBefore = (dateString?: string) => {
+    if (!dateString) return false;
+    const today = new Date().toISOString().split("T")[0];
+    return dateString <= today;
+  };
+
   // For "Today" view, use special sorting
   if (view === "recentlyDeleted") {
     // Show deleted items only
@@ -105,9 +112,9 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
   }
 
   if (view === "today") {
-    // Only consider todos due today or without due date
+    // Only consider todos due today or before (overdue) or without due date
     const dueToday = todos.filter(
-      (todo) => !todo.completed && todo.dueDate && isToday(todo.dueDate) && !todo.deletedAt
+      (todo) => !todo.completed && todo.dueDate && isTodayOrBefore(todo.dueDate) && !todo.deletedAt
     );
     // 1. Starred todo with due date = today (not completed)
     const starredWithDueToday = dueToday
