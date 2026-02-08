@@ -75,7 +75,10 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 onChange={(e) => setEditData({ ...editData, summary: e.target.value })}
                 className="mt-0.5"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                  if (
+                    (e.key === "Enter" && e.ctrlKey) ||
+                    (e.key === "Enter" && e.metaKey)
+                  ) {
                     e.preventDefault();
                     handleCollapse();
                   }
@@ -91,6 +94,15 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                 className="mt-0.5 min-h-20"
                 placeholder="Add details..."
+                onKeyDown={(e) => {
+                  if (
+                    (e.key === "Enter" && e.ctrlKey) ||
+                    (e.key === "Enter" && e.metaKey)
+                  ) {
+                    e.preventDefault();
+                    handleCollapse();
+                  }
+                }}
               />
             </div>
 
@@ -103,6 +115,15 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                   value={editData.dueDate}
                   onChange={(e) => setEditData({ ...editData, dueDate: e.target.value })}
                   className="mt-0.5"
+                  onKeyDown={(e) => {
+                    if (
+                      (e.key === "Enter" && e.ctrlKey) ||
+                      (e.key === "Enter" && e.metaKey)
+                    ) {
+                      e.preventDefault();
+                      handleCollapse();
+                    }
+                  }}
                 />
               </div>
 
@@ -115,6 +136,15 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                   value={editData.repeatDays}
                   onChange={(e) => setEditData({ ...editData, repeatDays: parseInt(e.target.value) || 0 })}
                   className="mt-1"
+                  onKeyDown={(e) => {
+                    if (
+                      (e.key === "Enter" && e.ctrlKey) ||
+                      (e.key === "Enter" && e.metaKey)
+                    ) {
+                      e.preventDefault();
+                      handleCollapse();
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -127,6 +157,15 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 onChange={(e) => setEditData({ ...editData, group: e.target.value })}
                 className="mt-0.5"
                 placeholder="e.g., Work, Personal..."
+                onKeyDown={(e) => {
+                  if (
+                    (e.key === "Enter" && e.ctrlKey) ||
+                    (e.key === "Enter" && e.metaKey)
+                  ) {
+                    e.preventDefault();
+                    handleCollapse();
+                  }
+                }}
               />
             </div>
 
@@ -158,7 +197,8 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end items-center gap-2">
+          <span className="text-xs text-zinc-500 pl-2">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> in any field to save the changes</span>
           <Button
             variant="ghost"
             size="sm"
@@ -205,10 +245,10 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
           {todo.summary}
         </label>
         {todo.starred && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
-        {todo.priority && <span className="text-red-500 text-sm font-bold">{todo.priority}</span>}
+        {todo.priority && <span className="text-red-500 font-bold">{todo.priority}</span>}
         {todo.repeatDays > 0 && <Repeat className="h-4 w-4 text-zinc-400" />}
         {showGroupInline && todo.group && (
-          <span className="ml-1 text-[10px] font-medium text-blue-600 bg-blue-50 rounded px-1 py-0 whitespace-nowrap">
+          <span className="ml-1 text-sm font-medium text-blue-700 bg-blue-50 rounded px-2 py-0.5 whitespace-nowrap">
             {todo.group}
           </span>
         )}
