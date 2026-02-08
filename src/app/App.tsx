@@ -6,12 +6,13 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { Sidebar } from "./components/Sidebar";
 import { TodoList } from "./components/TodoList";
 import { Todo } from "./components/TodoItem";
-import { fetchTodos, addTodo, updateTodo, deleteTodo } from "./supabaseTodos";
+import { fetchTodos, addTodo, updateTodo, deleteTodo, fetchGroupOrder, updateGroupOrder } from "./supabaseTodos";
 import { supabase } from "../supabaseClient";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<"today" | "backlog" | "recentlyDeleted">("today");
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [groupOrder, setGroupOrder] = useState<string[]>([]);
   const [loadingTodos, setLoadingTodos] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -29,11 +30,21 @@ export default function App() {
           .lt("deleted_at", thirtyDaysAgo)
           .eq("user_id", user.id);
         // Fetch todos
-        fetchTodos(user.id)
-          .then(setTodos)
-          .finally(() => setLoadingTodos(false));
+        const todos = await fetchTodos(user.id);
+        setTodos(todos);
+        // Fetch group order
+        try {
+          const orders = await fetchGroupOrder(user.id);
+          const backlogOrder = orders.backlog || [];
+          setGroupOrder(backlogOrder);
+        } catch (err) {
+          // Table may not exist yet, that's ok
+          setGroupOrder([]);
+        }
+        setLoadingTodos(false);
       } else {
         setTodos([]);
+        setGroupOrder([]);
       }
     }
     cleanupAndFetch();
@@ -186,10 +197,56 @@ export default function App() {
       });
 
       setTodos(finalTodos);
-      // Persist order changes
-      for (const t of finalTodos) {
-        await updateTodo(t.id, { order: finalTodos.findIndex((x) => x.id === t.id) });
+      // Persist order changes - update todos that had their group or order change
+      for (let i = 0; i < finalTodos.length; i++) {
+        const originalTodo = todos[todos.findIndex((t) => t.id === finalTodos[i].id)];
+        const updatedTodo = finalTodos[i];
+        
+        // Check if group or order changed
+        if (originalTodo && (originalTodo.group !== updatedTodo.group || originalTodo.order !== updatedTodo.order)) {
+          await updateTodo(updatedTodo.id, { 
+            group: updatedTodo.group,
+            order: updatedTodo.order,
+          });
+        }
       }
+    }
+  };
+
+  const handleMoveGroup = async (dragGroup: string, hoverGroup: string, insertAfter: boolean = false) => {
+    if (dragGroup === hoverGroup) return;
+
+    // Create new group order
+    const newGroupOrder = [...groupOrder];
+    const dragIndex = newGroupOrder.indexOf(dragGroup);
+    const hoverIndex = newGroupOrder.indexOf(hoverGroup);
+
+    // If groups not in the current order array, add them
+    if (dragIndex === -1) {
+      newGroupOrder.push(dragGroup);
+    }
+    if (hoverIndex === -1) {
+      newGroupOrder.push(hoverGroup);
+    }
+
+    // Get current indices (in case they were added above)
+    const currentDragIndex = newGroupOrder.indexOf(dragGroup);
+    const currentHoverIndex = newGroupOrder.indexOf(hoverGroup);
+
+    // Reorder
+    newGroupOrder.splice(currentDragIndex, 1);
+    const insertIndex = insertAfter ? currentHoverIndex + 1 : currentHoverIndex;
+    // Adjust insertion index if we removed an item before it
+    const adjustedInsertIndex = currentDragIndex < currentHoverIndex ? insertIndex - 1 : insertIndex;
+    newGroupOrder.splice(adjustedInsertIndex, 0, dragGroup);
+
+    setGroupOrder(newGroupOrder);
+
+    // Persist order
+    try {
+      await updateGroupOrder(user.id, { backlog: newGroupOrder });
+    } catch (err) {
+      console.error("Failed to save group order:", err);
     }
   };
 
@@ -213,6 +270,8 @@ export default function App() {
             onAdd={handleAdd}
             onUpdate={handleUpdate}
             onMove={handleMove}
+            onMoveGroup={handleMoveGroup}
+            groupOrder={groupOrder}
           />
         </div>
       </DndProvider>

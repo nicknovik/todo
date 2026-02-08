@@ -52,21 +52,23 @@ export async function addTodo(userId: string, todo: Omit<Todo, "id">) {
 }
 
 export async function updateTodo(todoId: string, updates: Partial<Todo>) {
+  const updateData: any = {};
+  
+  if (updates.summary !== undefined) updateData.summary = updates.summary;
+  if (updates.description !== undefined) updateData.description = updates.description;
+  if (updates.completed !== undefined) updateData.completed = updates.completed;
+  if (updates.category !== undefined) updateData.category = updates.category;
+  if (updates.dueDate !== undefined) updateData.due_date = updates.dueDate || null;
+  if (updates.starred !== undefined) updateData.starred = updates.starred;
+  if (updates.repeatDays !== undefined) updateData.repeat_days = updates.repeatDays;
+  if (updates.group !== undefined) updateData.group_name = updates.group || null;
+  if (updates.priority !== undefined) updateData.priority = updates.priority;
+  if (updates.order !== undefined) updateData.order_num = updates.order;
+  if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt || null;
+
   const { error } = await supabase
     .from("todos")
-    .update({
-      summary: updates.summary,
-      description: updates.description,
-      completed: updates.completed,
-      category: updates.category,
-      due_date: updates.dueDate || null,
-      starred: updates.starred,
-      repeat_days: updates.repeatDays,
-      group_name: updates.group || null,
-      priority: updates.priority,
-      order_num: updates.order,
-      completed_at: updates.completedAt || null,
-    })
+    .update(updateData)
     .eq("id", todoId);
   if (error) throw error;
 }
@@ -77,5 +79,29 @@ export async function deleteTodo(todoId: string) {
     .from("todos")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", todoId);
+  if (error) throw error;
+}
+
+export async function fetchGroupOrder(userId: string): Promise<Record<string, string[]>> {
+  const { data, error } = await supabase
+    .from("user_group_orders")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+  if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows found
+  return data?.group_orders || {};
+}
+
+export async function updateGroupOrder(userId: string, groupOrders: Record<string, string[]>) {
+  const { error } = await supabase
+    .from("user_group_orders")
+    .upsert(
+      {
+        user_id: userId,
+        group_orders: groupOrders,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
   if (error) throw error;
 }

@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Todo } from "./TodoItem";
 import { DraggableTodoItem } from "./DraggableTodoItem";
+import { DraggableGroupHeader } from "./DraggableGroupHeader";
+import { TodoDropZone } from "./TodoDropZone";
+import { GroupDropZone } from "./GroupDropZone";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { TodoItem } from "./TodoItem";
@@ -14,9 +17,11 @@ interface TodoListProps {
   onAdd: (text: string, category: "today" | "backlog") => void;
   onUpdate: (id: string, updates: Partial<Todo>) => void;
   onMove: (dragId: string, hoverId: string, dragGroup: string, hoverGroup: string) => void;
+  onMoveGroup?: (dragGroup: string, hoverGroup: string, insertAfter?: boolean) => void;
+  groupOrder?: string[];
 }
 
-export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onMove }: TodoListProps) {
+export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onMove, onMoveGroup, groupOrder }: TodoListProps) {
   const [newTodo, setNewTodo] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -45,6 +50,15 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
   } else {
     filteredTodos = todos.filter((todo) => todo.category === view && !todo.deletedAt);
   }
+
+  // Helper to get group rank from groupOrder
+  const getGroupRank = (group: string): number => {
+    if (!groupOrder || groupOrder.length === 0) {
+      return Infinity;
+    }
+    const index = groupOrder.indexOf(group);
+    return index === -1 ? Infinity : index;
+  };
 
   // Helper to get priority value for sorting
   const getPriorityValue = (priority: Todo["priority"]) => {
@@ -103,7 +117,8 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
         if (priorityDiff !== 0) return priorityDiff;
         const groupA = a.group || "Ungrouped";
         const groupB = b.group || "Ungrouped";
-        if (groupA !== groupB) return groupA.localeCompare(groupB);
+        const groupRankDiff = getGroupRank(groupA) - getGroupRank(groupB);
+        if (groupRankDiff !== 0) return groupRankDiff;
         return a.order - b.order;
       });
 
@@ -115,7 +130,8 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
         if (priorityDiff !== 0) return priorityDiff;
         const groupA = a.group || "Ungrouped";
         const groupB = b.group || "Ungrouped";
-        if (groupA !== groupB) return groupA.localeCompare(groupB);
+        const groupRankDiff = getGroupRank(groupA) - getGroupRank(groupB);
+        if (groupRankDiff !== 0) return groupRankDiff;
         return a.order - b.order;
       });
 
@@ -123,11 +139,19 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
     const withoutDueDate = todos
       .filter((todo) => !todo.completed && !todo.dueDate && !todo.deletedAt)
       .sort((a, b) => {
+        // 1. Sort by starred (true before false)
+        if (a.starred !== b.starred) {
+          return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
+        }
+        // 2. Sort by priority
         const priorityDiff = getPriorityValue(b.priority) - getPriorityValue(a.priority);
         if (priorityDiff !== 0) return priorityDiff;
+        // 3. Sort by group rank
         const groupA = a.group || "Ungrouped";
         const groupB = b.group || "Ungrouped";
-        if (groupA !== groupB) return groupA.localeCompare(groupB);
+        const groupRankDiff = getGroupRank(groupA) - getGroupRank(groupB);
+        if (groupRankDiff !== 0) return groupRankDiff;
+        // 4. Sort by item order
         return a.order - b.order;
       })
       .slice(0, 3);
@@ -290,6 +314,24 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
     groupedCompletedTodos[groupName].sort((a, b) => a.order - b.order);
   });
 
+  // Sort groups by groupOrder if provided
+  const sortGroupsByOrder = (groups: Record<string, Todo[]>) => {
+    if (!groupOrder || groupOrder.length === 0) {
+      return Object.keys(groups);
+    }
+    const sortedKeys = [...Object.keys(groups)].sort((a, b) => {
+      const aIndex = groupOrder.indexOf(a);
+      const bIndex = groupOrder.indexOf(b);
+      const aPosition = aIndex === -1 ? Infinity : aIndex;
+      const bPosition = bIndex === -1 ? Infinity : bIndex;
+      return aPosition - bPosition;
+    });
+    return sortedKeys;
+  };
+
+  const sortedActiveGroupNames = sortGroupsByOrder(groupedActiveTodos);
+  const sortedCompletedGroupNames = sortGroupsByOrder(groupedCompletedTodos);
+
   return (
     <div className="flex-1 h-full overflow-auto">
       <div className="max-w-2xl mx-auto p-4">
@@ -314,15 +356,25 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
         </form>
 
         <div className="space-y-4">
-          {Object.keys(groupedActiveTodos).length > 0 && (
+          {sortedActiveGroupNames.length > 0 && (
             <div className="space-y-3.5">
-              {Object.entries(groupedActiveTodos).map(([groupName, groupTodos]) => (
+              {sortedActiveGroupNames.map((groupName, groupIndex) => (
                 <div key={groupName} className="space-y-1.5">
-                  <h3 className="text-xs font-semibold text-zinc-700 px-2 py-1 bg-zinc-100 rounded-md">
-                    {groupName}
-                  </h3>
+                  {onMoveGroup && (
+                    <DraggableGroupHeader
+                      groupName={groupName}
+                      groupIndex={groupIndex}
+                      onMoveGroup={onMoveGroup}
+                      color="bg-zinc-100"
+                    />
+                  )}
+                  {!onMoveGroup && (
+                    <h3 className="text-xs font-semibold text-zinc-700 px-2 py-1 bg-zinc-100 rounded-md">
+                      {groupName}
+                    </h3>
+                  )}
                   <div className="space-y-1.5">
-                    {groupTodos.map((todo, index) => (
+                    {groupedActiveTodos[groupName].map((todo, index) => (
                       <DraggableTodoItem
                         key={todo.id}
                         todo={todo}
@@ -334,24 +386,41 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
                         onMove={onMove}
                       />
                     ))}
+                    {groupedActiveTodos[groupName].length > 0 && (
+                      <TodoDropZone
+                        groupName={groupName}
+                        lastTodoId={groupedActiveTodos[groupName][groupedActiveTodos[groupName].length - 1].id}
+                        onMove={onMove}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {Object.keys(groupedCompletedTodos).length > 0 && (
+          {sortedCompletedGroupNames.length > 0 && (
             <div className="space-y-3.5">
               <h3 className="text-xs font-medium text-zinc-500 mb-1 px-2">
                 Completed
               </h3>
-              {Object.entries(groupedCompletedTodos).map(([groupName, groupTodos]) => (
+              {sortedCompletedGroupNames.map((groupName, groupIndex) => (
                 <div key={`completed-${groupName}`} className="space-y-1.5">
-                  <h4 className="text-xs font-medium text-zinc-400 px-2">
-                    {groupName}
-                  </h4>
+                  {onMoveGroup && (
+                    <DraggableGroupHeader
+                      groupName={groupName}
+                      groupIndex={groupIndex}
+                      onMoveGroup={onMoveGroup}
+                      color="bg-zinc-50"
+                    />
+                  )}
+                  {!onMoveGroup && (
+                    <h4 className="text-xs font-medium text-zinc-400 px-2">
+                      {groupName}
+                    </h4>
+                  )}
                   <div className="space-y-1.5">
-                    {groupTodos.map((todo, index) => (
+                    {groupedCompletedTodos[groupName].map((todo, index) => (
                       <DraggableTodoItem
                         key={todo.id}
                         todo={todo}
@@ -363,9 +432,29 @@ export function TodoList({ todos, view, onToggle, onDelete, onAdd, onUpdate, onM
                         onMove={onMove}
                       />
                     ))}
+                    {groupedCompletedTodos[groupName].length > 0 && (
+                      <TodoDropZone
+                        groupName={groupName}
+                        lastTodoId={groupedCompletedTodos[groupName][groupedCompletedTodos[groupName].length - 1].id}
+                        onMove={onMove}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {onMoveGroup && (sortedActiveGroupNames.length > 0 || sortedCompletedGroupNames.length > 0) && (
+            <div className="mt-4">
+              <GroupDropZone
+                lastGroupName={
+                  sortedCompletedGroupNames.length > 0
+                    ? sortedCompletedGroupNames[sortedCompletedGroupNames.length - 1]
+                    : sortedActiveGroupNames[sortedActiveGroupNames.length - 1]
+                }
+                onMoveGroup={onMoveGroup}
+              />
             </div>
           )}
 

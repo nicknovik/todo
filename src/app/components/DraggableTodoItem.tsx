@@ -28,7 +28,8 @@ export function DraggableTodoItem({
   onUpdate,
   onMove,
 }: DraggableTodoItemProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
   const [{ isDragging }, drag, preview] = useDrag({
     type: "TODO",
@@ -38,12 +39,13 @@ export function DraggableTodoItem({
     }),
   });
 
-  const [, drop] = useDrop<DragItem>({
+  const [{ isOver }, drop] = useDrop<DragItem>({
     accept: "TODO",
-    hover: (item: DragItem) => {
-      if (!ref.current) {
+    hover: (item: DragItem, monitor) => {
+      if (!dropRef.current) {
         return;
       }
+      
       const dragId = item.id;
       const hoverId = todo.id;
 
@@ -52,12 +54,25 @@ export function DraggableTodoItem({
       }
 
       onMove(dragId, hoverId, item.groupName, groupName);
-      item.index = index;
+      // Update the item so we don't trigger multiple moves
       item.groupName = groupName;
     },
+    drop: (item: DragItem) => {
+      // The move already happened in hover, drop confirms the final position
+      const dragId = item.id;
+      const hoverId = todo.id;
+
+      if (dragId !== hoverId) {
+        onMove(dragId, hoverId, item.groupName, groupName);
+      }
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver({ shallow: true }),
+    }),
   });
 
-  drag(drop(ref));
+  drag(dragRef);
+  drop(dropRef);
 
   return (
     <div
@@ -65,11 +80,12 @@ export function DraggableTodoItem({
       style={{ opacity: isDragging ? 0.5 : 1 }}
       className="relative"
     >
-      <div className="flex items-center gap-2">
-        <div
-          ref={ref}
-          className="cursor-move text-zinc-400 hover:text-zinc-600"
-        >
+      <div ref={dropRef}>
+        <div className="flex items-center gap-2">
+          <div
+            ref={dragRef}
+            className="cursor-move text-zinc-400 hover:text-zinc-600"
+          >
           <GripVertical className="h-4 w-4" />
         </div>
         <div className="flex-1">
@@ -80,6 +96,7 @@ export function DraggableTodoItem({
             onUpdate={onUpdate}
           />
         </div>
+      </div>
       </div>
     </div>
   );
