@@ -100,7 +100,7 @@ export default function App() {
           completed: false,
           category: todo.category,
           dueDate: newDueDate.toISOString().split("T")[0],
-          starred: todo.starred,
+          starred: false,
           repeatDays: todo.repeatDays,
           group: todo.group,
           priority: todo.priority,
