@@ -1,6 +1,23 @@
 import { supabase } from "../supabaseClient";
 import { Todo } from "./components/TodoItem";
 
+const mapTodoRow = (row: any): Todo => ({
+  id: row.id,
+  summary: row.summary,
+  description: row.description || "",
+  completed: row.completed,
+  category: row.category,
+  dueDate: row.due_date || "",
+  starred: row.starred,
+  repeatDays: row.repeat_days,
+  group: row.group_name || "",
+  priority: row.priority || "",
+  order: row.order_num,
+  completedAt: row.completed_at || undefined,
+  deletedAt: row.deleted_at || null,
+  recurringParentId: row.recurring_parent_id || null,
+});
+
 export async function fetchTodos(userId: string): Promise<Todo[]> {
   const { data, error } = await supabase
     .from("todos")
@@ -8,24 +25,7 @@ export async function fetchTodos(userId: string): Promise<Todo[]> {
     .eq("user_id", userId)
     .order("order_num", { ascending: true });
   if (error) throw error;
-  return (
-    data?.map((row) => ({
-      id: row.id,
-      summary: row.summary,
-      description: row.description || "",
-      completed: row.completed,
-      category: row.category,
-      dueDate: row.due_date || "",
-      starred: row.starred,
-      repeatDays: row.repeat_days,
-      group: row.group_name || "",
-      priority: row.priority || "",
-      order: row.order_num,
-      completedAt: row.completed_at || undefined,
-      deletedAt: row.deleted_at || null,
-      recurringParentId: row.recurring_parent_id || null,
-    })) || []
-  );
+  return data?.map(mapTodoRow) || [];
 }
 
 export async function addTodo(userId: string, todo: Omit<Todo, "id">) {
@@ -50,7 +50,7 @@ export async function addTodo(userId: string, todo: Omit<Todo, "id">) {
     ])
     .select();
   if (error) throw error;
-  return data?.[0];
+  return data?.[0] ? mapTodoRow(data[0]) : null;
 }
 
 export async function updateTodo(todoId: string, updates: Partial<Todo>) {

@@ -202,10 +202,13 @@ export default function App() {
       order: maxOrder + 1,
       recurringParentId: null,
     };
-    await addTodo(user.id, newTodo);
-    // Refetch todos from backend to ensure state is correct
-    const updatedTodos = await fetchTodos(user.id);
-    setTodos(updatedTodos);
+    const createdTodo = await addTodo(user.id, newTodo);
+    if (createdTodo) {
+      setTodos((prev) => [...prev, createdTodo]);
+    } else {
+      const updatedTodos = await fetchTodos(user.id);
+      setTodos(updatedTodos);
+    }
   };
 
   const handleUpdate = async (id: string, updates: Partial<Todo>) => {
