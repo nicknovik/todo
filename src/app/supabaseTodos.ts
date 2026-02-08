@@ -23,6 +23,7 @@ export async function fetchTodos(userId: string): Promise<Todo[]> {
       order: row.order_num,
       completedAt: row.completed_at || undefined,
       deletedAt: row.deleted_at || null,
+      recurringParentId: row.recurring_parent_id || null,
     })) || []
   );
 }
@@ -44,6 +45,7 @@ export async function addTodo(userId: string, todo: Omit<Todo, "id">) {
         priority: todo.priority,
         order_num: todo.order,
         completed_at: todo.completedAt || null,
+        recurring_parent_id: todo.recurringParentId || null,
       },
     ])
     .select();
@@ -65,6 +67,7 @@ export async function updateTodo(todoId: string, updates: Partial<Todo>) {
   if (updates.priority !== undefined) updateData.priority = updates.priority;
   if (updates.order !== undefined) updateData.order_num = updates.order;
   if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt || null;
+  if (updates.recurringParentId !== undefined) updateData.recurring_parent_id = updates.recurringParentId || null;
 
   const { error } = await supabase
     .from("todos")

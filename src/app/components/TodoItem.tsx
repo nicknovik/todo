@@ -20,6 +20,7 @@ export interface Todo {
   order: number;
   completedAt?: string;
   deletedAt?: string | null;
+  recurringParentId?: string | null;
 }
 
 interface TodoItemProps {
@@ -187,8 +188,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
     >
       <Checkbox
         checked={todo.completed}
-        onCheckedChange={(e) => {
-          e?.stopPropagation?.();
+        onCheckedChange={() => {
           onToggle(todo.id);
         }}
         onClick={(e) => e.stopPropagation()}

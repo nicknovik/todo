@@ -67,12 +67,60 @@ export default function App() {
   const handleToggle = async (id: string) => {
     const todo = todos.find((t) => t.id === id);
     if (!todo) return;
+    
+    const isCompletingNow = !todo.completed;
     const updates = {
-      completed: !todo.completed,
-      completedAt: !todo.completed ? new Date().toISOString().split("T")[0] : undefined,
+      completed: isCompletingNow,
+      completedAt: isCompletingNow ? new Date().toISOString().split("T")[0] : undefined,
     };
+    
     setTodos(todos.map((t) => (t.id === id ? { ...t, ...updates } : t)));
     await updateTodo(id, updates);
+    
+    // Handle recurring items
+    if (todo.repeatDays > 0) {
+      if (isCompletingNow) {
+        // Create a new recurring item with due date = completion date + repeatDays
+        const completionDate = updates.completedAt ? new Date(updates.completedAt) : new Date();
+        const newDueDate = new Date(completionDate);
+        newDueDate.setDate(newDueDate.getDate() + todo.repeatDays);
+
+        const targetGroup = todo.group || "";
+        const siblingTodos = todos.filter(
+          (t) =>
+            t.category === todo.category &&
+            (t.group || "") === targetGroup &&
+            !t.deletedAt
+        );
+        const maxOrder = siblingTodos.length > 0 ? Math.max(...siblingTodos.map((t) => t.order)) : -1;
+        
+        const newTodo = {
+          summary: todo.summary,
+          description: todo.description,
+          completed: false,
+          category: todo.category,
+          dueDate: newDueDate.toISOString().split("T")[0],
+          starred: todo.starred,
+          repeatDays: todo.repeatDays,
+          group: todo.group,
+          priority: todo.priority,
+          order: maxOrder + 1,
+          recurringParentId: todo.id,
+        };
+        
+        await addTodo(user.id, newTodo);
+        // Refetch to get the newly created todo
+        const updatedTodos = await fetchTodos(user.id);
+        setTodos(updatedTodos);
+      } else {
+        // Uncompleting: delete the child recurring item
+        const childTodo = todos.find((t) => t.recurringParentId === todo.id && !t.deletedAt);
+        if (childTodo) {
+          await deleteTodo(childTodo.id);
+          setTodos(todos.map((t) => t.id === childTodo.id ? { ...t, deletedAt: new Date().toISOString() } : t));
+        }
+      }
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -99,6 +147,7 @@ export default function App() {
       group: "",
       priority: "" as "" | "!" | "!!" | "!!!",
       order: maxOrder + 1,
+      recurringParentId: null,
     };
     await addTodo(user.id, newTodo);
     // Refetch todos from backend to ensure state is correct
