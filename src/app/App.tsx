@@ -100,6 +100,16 @@ export default function App() {
     loadCalendarEvents();
   }, [user?.id, currentView]);
 
+  // Update page title based on current view
+  useEffect(() => {
+    const viewNames = {
+      today: "Today",
+      backlog: "Backlog",
+      recentlyDeleted: "Recently deleted"
+    };
+    document.title = `Todo - ${viewNames[currentView]}`;
+  }, [currentView]);
+
   // Note: We intentionally do NOT call getSession() (directly or via
   // fetchTodayCalendarEvents) inside an onAuthStateChange callback.
   // Supabase v2 awaits all subscriber callbacks during initialization,
