@@ -57,17 +57,17 @@ export function CalendarEvents({ events, onAddCalendarAccess }: CalendarEventsPr
         {events.map((event) => (
           <div
             key={event.id}
-            className="border border-blue-200 rounded-lg p-1 bg-blue-50 flex flex-col gap-0.5"
+            className="border border-blue-200 rounded-lg px-1 pt-0 pb-1 bg-blue-50 flex flex-col gap-0.5"
           >
             <div className="flex items-start justify-between gap-2">
               <h4 className="font-medium text-sm text-blue-900 flex-1">
                 {event.summary}
               </h4>
+              <p className="text-xs text-blue-700 whitespace-nowrap">
+                {formatTime(event.startTime, event.allDay)}
+                {!event.allDay && ` - ${formatTime(event.endTime, event.allDay)}`}
+              </p>
             </div>
-            <p className="text-xs text-blue-700">
-              {formatTime(event.startTime, event.allDay)}
-              {!event.allDay && ` - ${formatTime(event.endTime, event.allDay)}`}
-            </p>
             {event.description && (
               <p className="text-xs text-blue-600 line-clamp-2">
                 {event.description}
