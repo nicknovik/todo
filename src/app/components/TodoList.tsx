@@ -42,6 +42,14 @@ function todayStr(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+const MS_PER_DAY = 86_400_000;
+const COMPLETED_RECENT_DAYS = 7;
+const DELETED_RECENT_DAYS = 30;
+
+function isWithinDays(dateStr: string, days: number, now = Date.now()): boolean {
+  return (now - new Date(dateStr).getTime()) / MS_PER_DAY <= days;
+}
+
 /** Sort comparator: priority → group rank → item order. */
 function byPriorityGroupOrder(
   a: Todo,
@@ -111,12 +119,28 @@ export function TodoList({
   // ── Derived data ───────────────────────────────────────────────────
 
   const recentlyDeleted = useMemo(() => {
-    if (view !== "recentlyDeleted") return [];
+    if (view !== "deleted") return [];
     const now = Date.now();
-    const MS_PER_DAY = 86_400_000;
     return todos.filter(
-      (t) => t.deletedAt && (now - new Date(t.deletedAt).getTime()) / MS_PER_DAY <= 30,
+      (t) => t.deletedAt && isWithinDays(t.deletedAt, DELETED_RECENT_DAYS, now),
     );
+  }, [todos, view]);
+
+  const completedRecently = useMemo(() => {
+    if (view !== "backlog") return [];
+    const now = Date.now();
+    return todos.filter(
+      (t) =>
+        t.completed &&
+        !t.deletedAt &&
+        t.completedAt &&
+        isWithinDays(t.completedAt, COMPLETED_RECENT_DAYS, now),
+    );
+  }, [todos, view]);
+
+  const completedAll = useMemo(() => {
+    if (view !== "completed") return [];
+    return todos.filter((t) => t.completed && !t.deletedAt);
   }, [todos, view]);
 
   // Memoised filtered/sorted buckets for the "today" view
@@ -163,8 +187,16 @@ export function TodoList({
   }, [todos, view, groupOrder]);
 
   const { activeGroups, activeKeys, completedGroups, completedKeys } = useMemo(() => {
-    const active = todos.filter((t) => !t.completed && !t.deletedAt);
-    const completed = todos.filter((t) => t.completed && !t.deletedAt);
+    const active =
+      view === "backlog"
+        ? todos.filter((t) => !t.completed && !t.deletedAt)
+        : [];
+    const completed =
+      view === "backlog"
+        ? completedRecently
+        : view === "completed"
+          ? completedAll
+          : [];
 
     const ag = groupByName(active);
     const cg = groupByName(completed);
@@ -175,18 +207,18 @@ export function TodoList({
       completedGroups: cg,
       completedKeys: sortGroupKeys(cg, groupOrder),
     };
-  }, [todos, groupOrder]);
+  }, [todos, groupOrder, view, completedRecently, completedAll]);
 
   const hasAnyGroups = activeKeys.length > 0 || completedKeys.length > 0;
 
   // ── Render branches ───────────────────────────────────────────────
 
-  if (view === "recentlyDeleted") {
+  if (view === "deleted") {
     return (
       <div className="flex-1 h-full overflow-auto">
         <div className="max-w-2xl mx-auto p-4">
           <h2 className="text-3xl font-semibold text-zinc-900 mb-4">
-            Recently deleted
+            Deleted
           </h2>
           <div className="space-y-0">
             {recentlyDeleted.length > 0 ? (
@@ -210,7 +242,7 @@ export function TodoList({
               ))
             ) : (
               <p className="text-center py-6 text-zinc-400">
-                No recently deleted items.
+                No deleted items.
               </p>
             )}
           </div>
@@ -283,6 +315,73 @@ export function TodoList({
     );
   }
 
+  if (view === "completed") {
+    return (
+      <div className="flex-1 h-full overflow-auto">
+        <div className="max-w-2xl mx-auto p-4">
+          <h2 className="text-2xl font-semibold text-zinc-900 mb-4">Completed</h2>
+
+          <div className="space-y-0">
+            {completedKeys.length > 0 ? (
+              <div className="space-y-0">
+                {completedKeys.map((groupName, idx) => (
+                  <div key={`completed-${groupName}`} className="space-y-0">
+                    {onMoveGroup ? (
+                      <DraggableGroupHeader
+                        groupName={groupName}
+                        groupIndex={idx}
+                        onRenameGroup={onRenameGroup}
+                        onMoveGroup={onMoveGroup}
+                        color="bg-zinc-50"
+                      />
+                    ) : (
+                      <h4 className="text-xs font-medium text-zinc-400 px-2">
+                        {groupName}
+                      </h4>
+                    )}
+
+                    <div className="space-y-0">
+                      {completedGroups[groupName].map((todo, i) => (
+                        <DraggableTodoItem
+                          key={todo.id}
+                          todo={todo}
+                          index={i}
+                          groupName={groupName}
+                          onToggle={onToggle}
+                          onDelete={onDelete}
+                          onUpdate={onUpdate}
+                          onMove={onMove}
+                        />
+                      ))}
+                      <TodoDropZone
+                        groupName={groupName}
+                        lastTodoId={completedGroups[groupName].at(-1)?.id ?? null}
+                        onMove={onMove}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center py-6 text-zinc-400">
+                No completed items yet.
+              </p>
+            )}
+
+            {onMoveGroup && completedKeys.length > 0 && (
+              <div className="mt-4">
+                <GroupDropZone
+                  lastGroupName={completedKeys.at(-1)!}
+                  onMoveGroup={onMoveGroup}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── Backlog view ───────────────────────────────────────────────────
 
   return (
@@ -342,7 +441,7 @@ export function TodoList({
           {completedKeys.length > 0 && (
             <div className="space-y-0">
               <h3 className="text-xs font-medium text-zinc-500 mb-1 px-2">
-                Completed
+                Completed recently
               </h3>
               {completedKeys.map((groupName, idx) => (
                 <div key={`completed-${groupName}`} className="space-y-0">

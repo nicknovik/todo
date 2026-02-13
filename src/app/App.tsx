@@ -119,7 +119,8 @@ export default function App() {
     const VIEW_TITLES: Record<ViewType, string> = {
       today: "Today",
       backlog: "Backlog",
-      recentlyDeleted: "Recently deleted",
+      completed: "Completed",
+      deleted: "Deleted",
     };
     document.title = `Todo – ${VIEW_TITLES[currentView]}`;
   }, [currentView]);

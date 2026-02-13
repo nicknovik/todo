@@ -1,5 +1,5 @@
 
-import { Calendar, Inbox, Trash2 } from "lucide-react";
+import { Calendar, CheckCircle2, Inbox, Trash2 } from "lucide-react";
 import type { ViewType } from "../types";
 
 interface SidebarProps {
@@ -38,15 +38,26 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           <span className="hidden md:inline">Backlog</span>
         </button>
         <button
-          onClick={() => onViewChange("recentlyDeleted")}
+          onClick={() => onViewChange("completed")}
           className={`w-full flex items-center justify-center md:justify-start gap-3 px-3 py-2 rounded-lg transition-colors ${
-            currentView === "recentlyDeleted"
+            currentView === "completed"
+              ? "bg-zinc-900 text-white"
+              : "text-zinc-600 hover:bg-zinc-100"
+          }`}
+        >
+          <CheckCircle2 className="h-5 w-5" />
+          <span className="hidden md:inline">Completed</span>
+        </button>
+        <button
+          onClick={() => onViewChange("deleted")}
+          className={`w-full flex items-center justify-center md:justify-start gap-3 px-3 py-2 rounded-lg transition-colors ${
+            currentView === "deleted"
               ? "bg-zinc-900 text-white"
               : "text-zinc-600 hover:bg-zinc-100"
           }`}
         >
           <Trash2 className="h-5 w-5" />
-          <span className="hidden md:inline">Recently deleted</span>
+          <span className="hidden md:inline">Deleted</span>
         </button>
       </nav>
     </div>

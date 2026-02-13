@@ -1,6 +1,6 @@
 /** Shared type definitions for the todo application. */
 
-export type ViewType = "today" | "backlog" | "recentlyDeleted";
+export type ViewType = "today" | "backlog" | "completed" | "deleted";
 
 export type Priority = "" | "!" | "!!" | "!!!";
 
