@@ -108,7 +108,7 @@ export function TodoList({
     setNewTodo("");
   };
 
-  // ── Recently-deleted view ──────────────────────────────────────────
+  // ── Derived data ───────────────────────────────────────────────────
 
   const recentlyDeleted = useMemo(() => {
     if (view !== "recentlyDeleted") return [];
@@ -118,46 +118,6 @@ export function TodoList({
       (t) => t.deletedAt && (now - new Date(t.deletedAt).getTime()) / MS_PER_DAY <= 30,
     );
   }, [todos, view]);
-
-  if (view === "recentlyDeleted") {
-    return (
-      <div className="flex-1 h-full overflow-auto">
-        <div className="max-w-2xl mx-auto p-4">
-          <h2 className="text-3xl font-semibold text-zinc-900 mb-4">
-            Recently deleted
-          </h2>
-          <div className="space-y-0">
-            {recentlyDeleted.length > 0 ? (
-              recentlyDeleted.map((todo) => (
-                <div
-                  key={todo.id}
-                  className="border border-zinc-200 rounded-lg p-0.5 bg-zinc-50 flex flex-col gap-0.5 opacity-60"
-                >
-                  <div className="flex items-center gap-1">
-                    <span className="font-semibold text-zinc-700 line-through text-sm">
-                      {todo.summary}
-                    </span>
-                    <span className="text-sm text-zinc-400 ml-1">
-                      Deleted: {todo.deletedAt?.slice(0, 10)}
-                    </span>
-                  </div>
-                  {todo.description && (
-                    <div className="text-zinc-400 text-xs">{todo.description}</div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="text-center py-6 text-zinc-400">
-                No recently deleted items.
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Today view ─────────────────────────────────────────────────────
 
   // Memoised filtered/sorted buckets for the "today" view
   const todayBuckets = useMemo(() => {
@@ -201,6 +161,63 @@ export function TodoList({
 
     return { starredDue, scheduledDue, nextUp, completedToday, isEmpty };
   }, [todos, view, groupOrder]);
+
+  const { activeGroups, activeKeys, completedGroups, completedKeys } = useMemo(() => {
+    const active = todos.filter((t) => !t.completed && !t.deletedAt);
+    const completed = todos.filter((t) => t.completed && !t.deletedAt);
+
+    const ag = groupByName(active);
+    const cg = groupByName(completed);
+
+    return {
+      activeGroups: ag,
+      activeKeys: sortGroupKeys(ag, groupOrder),
+      completedGroups: cg,
+      completedKeys: sortGroupKeys(cg, groupOrder),
+    };
+  }, [todos, groupOrder]);
+
+  const hasAnyGroups = activeKeys.length > 0 || completedKeys.length > 0;
+
+  // ── Render branches ───────────────────────────────────────────────
+
+  if (view === "recentlyDeleted") {
+    return (
+      <div className="flex-1 h-full overflow-auto">
+        <div className="max-w-2xl mx-auto p-4">
+          <h2 className="text-3xl font-semibold text-zinc-900 mb-4">
+            Recently deleted
+          </h2>
+          <div className="space-y-0">
+            {recentlyDeleted.length > 0 ? (
+              recentlyDeleted.map((todo) => (
+                <div
+                  key={todo.id}
+                  className="border border-zinc-200 rounded-lg p-0.5 bg-zinc-50 flex flex-col gap-0.5 opacity-60"
+                >
+                  <div className="flex items-center gap-1">
+                    <span className="font-semibold text-zinc-700 line-through text-sm">
+                      {todo.summary}
+                    </span>
+                    <span className="text-sm text-zinc-400 ml-1">
+                      Deleted: {todo.deletedAt?.slice(0, 10)}
+                    </span>
+                  </div>
+                  {todo.description && (
+                    <div className="text-zinc-400 text-xs">{todo.description}</div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-center py-6 text-zinc-400">
+                No recently deleted items.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (view === "today" && todayBuckets) {
     const { starredDue, scheduledDue, nextUp, completedToday, isEmpty } = todayBuckets;
@@ -267,23 +284,6 @@ export function TodoList({
   }
 
   // ── Backlog view ───────────────────────────────────────────────────
-
-  const { activeGroups, activeKeys, completedGroups, completedKeys } = useMemo(() => {
-    const active = todos.filter((t) => !t.completed && !t.deletedAt);
-    const completed = todos.filter((t) => t.completed && !t.deletedAt);
-
-    const ag = groupByName(active);
-    const cg = groupByName(completed);
-
-    return {
-      activeGroups: ag,
-      activeKeys: sortGroupKeys(ag, groupOrder),
-      completedGroups: cg,
-      completedKeys: sortGroupKeys(cg, groupOrder),
-    };
-  }, [todos, groupOrder]);
-
-  const hasAnyGroups = activeKeys.length > 0 || completedKeys.length > 0;
 
   return (
     <div className="flex-1 h-full overflow-auto">
