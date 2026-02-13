@@ -1,7 +1,7 @@
 
 import { Calendar, Inbox, Trash2 } from "lucide-react";
+import type { ViewType } from "../types";
 
-type ViewType = "today" | "backlog" | "recentlyDeleted";
 interface SidebarProps {
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;

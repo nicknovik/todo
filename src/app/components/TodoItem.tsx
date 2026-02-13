@@ -5,23 +5,11 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
+import type { Todo } from "../types";
+import { PRIORITY_CYCLE } from "../types";
 
-export interface Todo {
-  id: string;
-  summary: string;
-  description: string;
-  completed: boolean;
-  category: "today" | "backlog";
-  dueDate: string;
-  starred: boolean;
-  repeatDays: number;
-  group: string;
-  priority: "" | "!" | "!!" | "!!!";
-  order: number;
-  completedAt?: string;
-  deletedAt?: string | null;
-  recurringParentId?: string | null;
-}
+// Re-export so existing imports from this file still resolve
+export type { Todo } from "../types";
 
 interface TodoItemProps {
   todo: Todo;
@@ -29,6 +17,17 @@ interface TodoItemProps {
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<Todo>) => void;
   showGroupInline?: boolean;
+}
+
+/** Save on Ctrl+Enter / Cmd+Enter from any field. */
+function saveOnModEnter(
+  e: React.KeyboardEvent,
+  save: () => void,
+) {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    save();
+  }
 }
 
 export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }: TodoItemProps) {
@@ -45,15 +44,12 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
     onUpdate(todo.id, editData);
   };
 
-  const toggleStar = () => {
+  const toggleStar = () =>
     setEditData({ ...editData, starred: !editData.starred });
-  };
 
-  const togglePriority = () => {
-    const priorities: Array<"" | "!" | "!!" | "!!!"> = ["", "!", "!!", "!!!"];
-    const currentIndex = priorities.indexOf(editData.priority);
-    const nextIndex = (currentIndex + 1) % priorities.length;
-    setEditData({ ...editData, priority: priorities[nextIndex] });
+  const cyclePriority = () => {
+    const idx = PRIORITY_CYCLE.indexOf(editData.priority);
+    setEditData({ ...editData, priority: PRIORITY_CYCLE[(idx + 1) % PRIORITY_CYCLE.length] });
   };
 
   if (isExpanded) {
@@ -74,15 +70,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 value={editData.summary}
                 onChange={(e) => setEditData({ ...editData, summary: e.target.value })}
                 className="mt-0.5"
-                onKeyDown={(e) => {
-                  if (
-                    (e.key === "Enter" && e.ctrlKey) ||
-                    (e.key === "Enter" && e.metaKey)
-                  ) {
-                    e.preventDefault();
-                    handleCollapse();
-                  }
-                }}
+                onKeyDown={(e) => saveOnModEnter(e, handleCollapse)}
               />
             </div>
 
@@ -94,15 +82,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                 className="mt-0.5 min-h-20"
                 placeholder="Add details..."
-                onKeyDown={(e) => {
-                  if (
-                    (e.key === "Enter" && e.ctrlKey) ||
-                    (e.key === "Enter" && e.metaKey)
-                  ) {
-                    e.preventDefault();
-                    handleCollapse();
-                  }
-                }}
+                onKeyDown={(e) => saveOnModEnter(e, handleCollapse)}
               />
             </div>
 
@@ -115,15 +95,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                   value={editData.dueDate}
                   onChange={(e) => setEditData({ ...editData, dueDate: e.target.value })}
                   className="mt-0.5"
-                  onKeyDown={(e) => {
-                    if (
-                      (e.key === "Enter" && e.ctrlKey) ||
-                      (e.key === "Enter" && e.metaKey)
-                    ) {
-                      e.preventDefault();
-                      handleCollapse();
-                    }
-                  }}
+                  onKeyDown={(e) => saveOnModEnter(e, handleCollapse)}
                 />
               </div>
 
@@ -136,15 +108,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                   value={editData.repeatDays}
                   onChange={(e) => setEditData({ ...editData, repeatDays: parseInt(e.target.value) || 0 })}
                   className="mt-1"
-                  onKeyDown={(e) => {
-                    if (
-                      (e.key === "Enter" && e.ctrlKey) ||
-                      (e.key === "Enter" && e.metaKey)
-                    ) {
-                      e.preventDefault();
-                      handleCollapse();
-                    }
-                  }}
+                  onKeyDown={(e) => saveOnModEnter(e, handleCollapse)}
                 />
               </div>
             </div>
@@ -157,15 +121,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 onChange={(e) => setEditData({ ...editData, group: e.target.value })}
                 className="mt-0.5"
                 placeholder="e.g., Work, Personal..."
-                onKeyDown={(e) => {
-                  if (
-                    (e.key === "Enter" && e.ctrlKey) ||
-                    (e.key === "Enter" && e.metaKey)
-                  ) {
-                    e.preventDefault();
-                    handleCollapse();
-                  }
-                }}
+                onKeyDown={(e) => saveOnModEnter(e, handleCollapse)}
               />
             </div>
 
@@ -184,7 +140,7 @@ export function TodoItem({ todo, onToggle, onDelete, onUpdate, showGroupInline }
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={togglePriority}
+                onClick={cyclePriority}
                 className="text-zinc-700"
               >
                 {editData.priority ? (

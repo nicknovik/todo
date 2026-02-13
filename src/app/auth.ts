@@ -1,5 +1,9 @@
 import { supabase } from "../supabaseClient";
 
+/** Google OAuth scopes requested at sign-in. */
+const GOOGLE_SCOPES =
+  "openid profile email https://www.googleapis.com/auth/calendar.readonly";
+
 export async function signUpWithEmail(email: string, password: string) {
   const { data, error } = await supabase.auth.signUp({ email, password });
   return { user: data?.user, error };
@@ -12,18 +16,17 @@ export async function signInWithEmail(email: string, password: string) {
 
 export async function signInWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
+    provider: "google",
     options: {
       redirectTo: window.location.origin,
-      scopes: 'openid profile email https://www.googleapis.com/auth/calendar.readonly',
+      scopes: GOOGLE_SCOPES,
     },
   });
   return { error };
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  return { error };
+  await supabase.auth.signOut();
 }
 
 export function getCurrentUser() {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signInWithEmail, signUpWithEmail, signOut, getCurrentUser, signInWithGoogle } from "../auth";
+import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "../auth";
 
 export function AuthForm({ onAuth }: { onAuth: () => void }) {
   const [email, setEmail] = useState("");

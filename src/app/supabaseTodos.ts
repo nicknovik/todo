@@ -1,22 +1,69 @@
 import { supabase } from "../supabaseClient";
-import { Todo } from "./components/TodoItem";
+import type { Todo } from "./types";
 
-const mapTodoRow = (row: any): Todo => ({
-  id: row.id,
-  summary: row.summary,
-  description: row.description || "",
-  completed: row.completed,
-  category: row.category,
-  dueDate: row.due_date || "",
-  starred: row.starred,
-  repeatDays: row.repeat_days,
-  group: row.group_name || "",
-  priority: row.priority || "",
-  order: row.order_num,
-  completedAt: row.completed_at || undefined,
-  deletedAt: row.deleted_at || null,
-  recurringParentId: row.recurring_parent_id || null,
-});
+// ── Field mapping ──────────────────────────────────────────────────────
+// Maps Todo property names to their corresponding Supabase column names.
+// Used by both `addTodo` and `updateTodo` so the mapping is defined once.
+
+const FIELD_TO_COLUMN: Record<string, string> = {
+  summary: "summary",
+  description: "description",
+  completed: "completed",
+  category: "category",
+  dueDate: "due_date",
+  starred: "starred",
+  repeatDays: "repeat_days",
+  group: "group_name",
+  priority: "priority",
+  order: "order_num",
+  completedAt: "completed_at",
+  recurringParentId: "recurring_parent_id",
+};
+
+/** Fields that should be stored as `null` when empty/falsy. */
+const NULLABLE_FIELDS = new Set([
+  "dueDate",
+  "group",
+  "completedAt",
+  "recurringParentId",
+]);
+
+/** Convert a Supabase row into a `Todo` object. */
+function mapRow(row: Record<string, unknown>): Todo {
+  return {
+    id: row.id as string,
+    summary: row.summary as string,
+    description: (row.description as string) || "",
+    completed: row.completed as boolean,
+    category: row.category as Todo["category"],
+    dueDate: (row.due_date as string) || "",
+    starred: row.starred as boolean,
+    repeatDays: row.repeat_days as number,
+    group: (row.group_name as string) || "",
+    priority: (row.priority as Todo["priority"]) || "",
+    order: row.order_num as number,
+    completedAt: (row.completed_at as string) || undefined,
+    deletedAt: (row.deleted_at as string) || null,
+    recurringParentId: (row.recurring_parent_id as string) || null,
+  };
+}
+
+/**
+ * Convert a partial `Todo` object into a Supabase column payload.
+ * Only includes fields that are present in `updates`.
+ */
+function toColumnPayload(updates: Partial<Todo>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  for (const [field, column] of Object.entries(FIELD_TO_COLUMN)) {
+    if (field in updates) {
+      const value = (updates as Record<string, unknown>)[field];
+      payload[column] = NULLABLE_FIELDS.has(field) ? value || null : value;
+    }
+  }
+  return payload;
+}
+
+// ── CRUD operations ────────────────────────────────────────────────────
 
 export async function fetchTodos(userId: string): Promise<Todo[]> {
   const { data, error } = await supabase
@@ -25,59 +72,43 @@ export async function fetchTodos(userId: string): Promise<Todo[]> {
     .eq("user_id", userId)
     .order("order_num", { ascending: true });
   if (error) throw error;
-  return data?.map(mapTodoRow) || [];
+  return (data ?? []).map(mapRow);
 }
 
-export async function addTodo(userId: string, todo: Omit<Todo, "id">) {
+export async function addTodo(
+  userId: string,
+  todo: Omit<Todo, "id">,
+): Promise<Todo | null> {
+  const row = {
+    user_id: userId,
+    ...toColumnPayload(todo),
+    deleted_at: null,
+  };
+
   const { data, error } = await supabase
     .from("todos")
-    .insert([
-      {
-        user_id: userId,
-        summary: todo.summary,
-        description: todo.description,
-        completed: todo.completed,
-        category: todo.category,
-        due_date: todo.dueDate || null,
-        starred: todo.starred,
-        repeat_days: todo.repeatDays,
-        group_name: todo.group || null,
-        priority: todo.priority,
-        order_num: todo.order,
-        completed_at: todo.completedAt || null,
-        recurring_parent_id: todo.recurringParentId || null,
-      },
-    ])
+    .insert([row])
     .select();
   if (error) throw error;
-  return data?.[0] ? mapTodoRow(data[0]) : null;
+  return data?.[0] ? mapRow(data[0]) : null;
 }
 
-export async function updateTodo(todoId: string, updates: Partial<Todo>) {
-  const updateData: any = {};
-  
-  if (updates.summary !== undefined) updateData.summary = updates.summary;
-  if (updates.description !== undefined) updateData.description = updates.description;
-  if (updates.completed !== undefined) updateData.completed = updates.completed;
-  if (updates.category !== undefined) updateData.category = updates.category;
-  if (updates.dueDate !== undefined) updateData.due_date = updates.dueDate || null;
-  if (updates.starred !== undefined) updateData.starred = updates.starred;
-  if (updates.repeatDays !== undefined) updateData.repeat_days = updates.repeatDays;
-  if (updates.group !== undefined) updateData.group_name = updates.group || null;
-  if (updates.priority !== undefined) updateData.priority = updates.priority;
-  if (updates.order !== undefined) updateData.order_num = updates.order;
-  if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt || null;
-  if (updates.recurringParentId !== undefined) updateData.recurring_parent_id = updates.recurringParentId || null;
+export async function updateTodo(
+  todoId: string,
+  updates: Partial<Todo>,
+): Promise<void> {
+  const payload = toColumnPayload(updates);
+  if (Object.keys(payload).length === 0) return;
 
   const { error } = await supabase
     .from("todos")
-    .update(updateData)
+    .update(payload)
     .eq("id", todoId);
   if (error) throw error;
 }
 
-export async function deleteTodo(todoId: string) {
-  // Soft delete: set deleted_at to now
+/** Soft-delete a todo by setting its `deleted_at` timestamp. */
+export async function softDeleteTodo(todoId: string): Promise<void> {
   const { error } = await supabase
     .from("todos")
     .update({ deleted_at: new Date().toISOString() })
@@ -85,17 +116,64 @@ export async function deleteTodo(todoId: string) {
   if (error) throw error;
 }
 
-export async function fetchGroupOrder(userId: string): Promise<Record<string, string[]>> {
+/**
+ * Permanently remove todos that were soft-deleted more than `days` ago.
+ * Called once per session during initial data load.
+ */
+export async function purgeOldDeletedTodos(
+  userId: string,
+  days: number,
+): Promise<void> {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase
+    .from("todos")
+    .delete()
+    .lt("deleted_at", cutoff)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+/**
+ * Persist order/group changes for multiple todos in parallel.
+ * Only sends updates for todos whose `order` or `group` actually changed.
+ */
+export async function batchUpdateOrder(
+  original: Todo[],
+  updated: Todo[],
+): Promise<void> {
+  const originalMap = new Map(original.map((t) => [t.id, t]));
+  const mutations = updated.filter((t) => {
+    const prev = originalMap.get(t.id);
+    return prev && (prev.order !== t.order || prev.group !== t.group);
+  });
+
+  if (mutations.length === 0) return;
+
+  await Promise.all(
+    mutations.map((t) => updateTodo(t.id, { order: t.order, group: t.group })),
+  );
+}
+
+// ── Group ordering ─────────────────────────────────────────────────────
+
+export async function fetchGroupOrder(
+  userId: string,
+): Promise<Record<string, string[]>> {
   const { data, error } = await supabase
     .from("user_group_orders")
     .select("*")
     .eq("user_id", userId)
     .single();
-  if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows found
-  return data?.group_orders || {};
+
+  // PGRST116 = no rows found — not an error for a new user
+  if (error && error.code !== "PGRST116") throw error;
+  return (data?.group_orders as Record<string, string[]>) ?? {};
 }
 
-export async function updateGroupOrder(userId: string, groupOrders: Record<string, string[]>) {
+export async function updateGroupOrder(
+  userId: string,
+  groupOrders: Record<string, string[]>,
+): Promise<void> {
   const { error } = await supabase
     .from("user_group_orders")
     .upsert(
@@ -104,7 +182,7 @@ export async function updateGroupOrder(userId: string, groupOrders: Record<strin
         group_orders: groupOrders,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "user_id" }
+      { onConflict: "user_id" },
     );
   if (error) throw error;
 }

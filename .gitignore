@@ -1,1 +1,8 @@
 node_modules
+dist
+
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.*.local
+.env

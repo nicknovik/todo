@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
-import { TodoItem, Todo } from "./TodoItem";
+import { TodoItem } from "./TodoItem";
+import type { Todo } from "../types";
 import { GripVertical } from "lucide-react";
 
 interface DraggableTodoItemProps {
